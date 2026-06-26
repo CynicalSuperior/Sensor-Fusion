@@ -1,0 +1,13 @@
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+
+# Generated challenge artifacts. Keep reports tracked if desired, but avoid
+# accidentally committing large regenerated tables by default.
+outputs/**/*.csv
+outputs/**/*.png
+outputs/**/*.json
+

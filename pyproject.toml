@@ -1,0 +1,16 @@
+[project]
+name = "sensor-fusion"
+version = "0.1.0"
+description = "Battlefield data challenge solution: timestamp repair, source fusion, and UAV-ground correlation."
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=3.0",
+  "numpy>=2.0",
+  "scipy>=1.10",
+  "matplotlib>=3.8",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
