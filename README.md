@@ -13,6 +13,7 @@ The pipeline reads the challenge files from `/home/CynicalSuperior/Downloads` by
 ```bash
 cd /home/CynicalSuperior/Projects/sensor-fusion
 python scripts/run_all.py
+python scripts/serve_demo.py
 pytest -q
 ```
 
@@ -30,6 +31,7 @@ Generated CSV artifacts are saved locally under `outputs/`:
 - `outputs/challenge1/fusion_clusters.csv`
 - `outputs/challenge1/source_summary.csv`
 - `outputs/challenge1/sample_geo_temporal_query.csv`
+- `outputs/challenge1/timeline_events.csv`
 - `outputs/challenge2/challenge2_cleaned.csv`
 - `outputs/challenge2/challenge2_repair_summary.csv`
 - `outputs/challenge3/daily_activity_counts.csv`
@@ -54,16 +56,39 @@ source, source_id, object_id, observed_at, created_at,
 lat, lon, end_lat, end_lon, geometry_type, object_type,
 app6_type, identity, status, quantity, trust, source_type,
 mission, uav_type, result, route_identification, route_type,
-signal_type, confidence, grid_cell, observed_date, time_bucket_6h
+signal_type, confidence, hex_cell, observed_date, time_bucket_6h
 ```
 
 Because `object_id` is not a universal cross-source key, the fusion layer uses conservative candidate clustering by:
 
-- 0.02 degree spatial grid
+- 5 km axial hex cell
 - 6 hour time bucket
 - normalized object family
 
 This produces analyst-reviewable fusion clusters rather than overclaiming object identity.
+
+## Demo UI
+
+The local frontend demonstrates the fusion engine end to end:
+
+```bash
+python scripts/serve_demo.py
+```
+
+Open `http://127.0.0.1:8765`.
+
+The demo exposes three API endpoints:
+
+- `/api/meta`
+- `/api/hexes`
+- `/api/timeline`
+
+The browser view provides:
+
+- source, object-family, date, confidence, and text filters
+- a canvas-rendered hex map colored by event density
+- click-to-select hex areas
+- a unified chronological timeline for the selected area
 
 ## Challenge 2
 
@@ -100,4 +125,3 @@ pytest -q
 ```
 
 Current verification: 4 tests passing, and `python scripts/run_all.py` completes all three challenge pipelines.
-

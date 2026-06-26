@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .config import data_root, output_root, reports_root
-from .geo import add_grid_cell, coordinate_extent
+from .geo import add_grid_cell, add_hex_cell, coordinate_extent
 
 
 CHALLENGE1_FILES = {
@@ -139,6 +139,7 @@ def normalize_all(data_dir: Path) -> pd.DataFrame:
     events["coordinate_role"] = events.get("coordinate_role", "start").fillna("start")
     events = events[events["observed_at"].notna()].copy()
     events = add_grid_cell(events, "lat", "lon", resolution_deg=0.02)
+    events = add_hex_cell(events, "lat", "lon", hex_size_km=5.0)
     events["observed_date"] = events["observed_at"].dt.date.astype(str)
     events["time_bucket_6h"] = events["observed_at"].dt.floor("6h")
     events["object_family"] = (
@@ -148,8 +149,8 @@ def normalize_all(data_dir: Path) -> pd.DataFrame:
 
 
 def build_clusters(events: pd.DataFrame) -> pd.DataFrame:
-    group_cols = ["grid_cell", "time_bucket_6h", "object_family"]
-    valid = events[(events["grid_cell"] != "") & events["time_bucket_6h"].notna()].copy()
+    group_cols = ["hex_cell", "hex_q", "hex_r", "time_bucket_6h", "object_family"]
+    valid = events[(events["hex_cell"] != "") & events["time_bucket_6h"].notna()].copy()
     valid["source_count_weight"] = 1
     clusters = (
         valid.groupby(group_cols)
@@ -161,6 +162,8 @@ def build_clusters(events: pd.DataFrame) -> pd.DataFrame:
             last_observed=("observed_at", "max"),
             centroid_lat=("lat", "mean"),
             centroid_lon=("lon", "mean"),
+            hex_center_lat=("hex_center_lat", "first"),
+            hex_center_lon=("hex_center_lon", "first"),
             total_quantity=("quantity", "sum"),
             mean_confidence=("confidence", "mean"),
             max_confidence=("confidence", "max"),
@@ -176,10 +179,39 @@ def build_clusters(events: pd.DataFrame) -> pd.DataFrame:
 
 
 def sample_queries(events: pd.DataFrame) -> pd.DataFrame:
-    dense_cell = events["grid_cell"].value_counts().index[0]
+    dense_cell = events["hex_cell"].value_counts().index[0]
     middle_date = events["observed_at"].dt.date.value_counts().index[0]
-    query = events[(events["grid_cell"] == dense_cell) & (events["observed_at"].dt.date == middle_date)]
+    query = events[(events["hex_cell"] == dense_cell) & (events["observed_at"].dt.date == middle_date)]
     return query.sort_values("observed_at").head(200)
+
+
+def timeline_events(events: pd.DataFrame) -> pd.DataFrame:
+    columns = [
+        "observed_at",
+        "hex_cell",
+        "hex_q",
+        "hex_r",
+        "hex_center_lat",
+        "hex_center_lon",
+        "source",
+        "source_id",
+        "object_id",
+        "object_family",
+        "object_type",
+        "app6_type",
+        "identity",
+        "status",
+        "quantity",
+        "confidence",
+        "lat",
+        "lon",
+        "mission",
+        "uav_type",
+        "result",
+        "signal_type",
+        "route_type",
+    ]
+    return events[columns].sort_values(["observed_at", "source", "source_id"]).copy()
 
 
 def run(data_dir: str | Path | None = None, out_dir: str | Path | None = None, report_dir: str | Path | None = None) -> dict[str, Path]:
@@ -193,24 +225,28 @@ def run(data_dir: str | Path | None = None, out_dir: str | Path | None = None, r
     clusters = build_clusters(events)
     source_summary = source_quality_summary(events)
     query = sample_queries(events)
+    timeline = timeline_events(events)
 
     events_path = outputs / "normalized_events.csv"
     clusters_path = outputs / "fusion_clusters.csv"
     summary_path = outputs / "source_summary.csv"
     query_path = outputs / "sample_geo_temporal_query.csv"
+    timeline_path = outputs / "timeline_events.csv"
     report_path = reports / "challenge1_fusion.md"
 
     events.to_csv(events_path, index=False)
     clusters.to_csv(clusters_path, index=False)
     source_summary.to_csv(summary_path, index=False)
     query.to_csv(query_path, index=False)
-    report_path.write_text(_report(events, clusters, source_summary, query_path), encoding="utf-8")
+    timeline.to_csv(timeline_path, index=False)
+    report_path.write_text(_report(events, clusters, source_summary, query_path, timeline_path), encoding="utf-8")
 
     return {
         "events": events_path,
         "clusters": clusters_path,
         "summary": summary_path,
         "query": query_path,
+        "timeline": timeline_path,
         "report": report_path,
     }
 
@@ -234,7 +270,13 @@ def source_quality_summary(events: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("rows", ascending=False)
 
 
-def _report(events: pd.DataFrame, clusters: pd.DataFrame, summary: pd.DataFrame, query_path: Path) -> str:
+def _report(
+    events: pd.DataFrame,
+    clusters: pd.DataFrame,
+    summary: pd.DataFrame,
+    query_path: Path,
+    timeline_path: Path,
+) -> str:
     source_lines = "\n".join(
         f"- {row.source}: {int(row.rows):,} normalized events, "
         f"{int(row.missing_coordinates):,} missing coordinates, "
@@ -243,7 +285,7 @@ def _report(events: pd.DataFrame, clusters: pd.DataFrame, summary: pd.DataFrame,
     )
     top_clusters = clusters.head(10)
     cluster_lines = "\n".join(
-        f"- {row.cluster_id}: {row.object_family} in {row.grid_cell}, "
+        f"- {row.cluster_id}: {row.object_family} in {row.hex_cell}, "
         f"{int(row.event_count)} events from {int(row.source_count)} sources, score {row.fusion_score}"
         for row in top_clusters.itertuples()
     )
@@ -257,7 +299,7 @@ Create one searchable battlefield event model from UAV, EW, SIGINT, satellite, c
 
 Each source is mapped into:
 
-`source, source_id, object_id, observed_at, created_at, lat, lon, end_lat, end_lon, geometry_type, object_type, app6_type, identity, status, quantity, trust, source_type, mission, uav_type, result, route_identification, route_type, signal_type, confidence, grid_cell, observed_date, time_bucket_6h`
+`source, source_id, object_id, observed_at, created_at, lat, lon, end_lat, end_lon, geometry_type, object_type, app6_type, identity, status, quantity, trust, source_type, mission, uav_type, result, route_identification, route_type, signal_type, confidence, hex_cell, observed_date, time_bucket_6h`
 
 ## Data Loaded
 
@@ -273,7 +315,7 @@ Each source is mapped into:
 
 Direct identifiers are sparse across sources, so `object_id` is preserved but not treated as the universal join key. The fusion layer uses a conservative geo-temporal bucket:
 
-- spatial bucket: 0.02 degree grid cell
+- spatial bucket: 5 km axial hex cell
 - time bucket: 6 hour window
 - semantic bucket: normalized object family
 
@@ -285,12 +327,12 @@ This produces reproducible candidate clusters for analyst review. The cluster sc
 
 ## Query Layer
 
-The sample query output demonstrates the intended analyst operation: "what happened in this grid cell on this date, ordered by time?"
+The sample query output demonstrates the intended analyst operation: "what happened in this hex cell on this date, ordered by time?"
 
 - Sample query CSV: `{query_path}`
+- Full timeline CSV: `{timeline_path}`
 
 ## Limitations
 
 The method avoids overclaiming identity-level fusion where sources do not share identifiers. It is a candidate fusion model, designed to be explainable and auditable before operational use.
 """
-

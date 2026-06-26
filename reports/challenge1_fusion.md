@@ -8,12 +8,12 @@ Create one searchable battlefield event model from UAV, EW, SIGINT, satellite, c
 
 Each source is mapped into:
 
-`source, source_id, object_id, observed_at, created_at, lat, lon, end_lat, end_lon, geometry_type, object_type, app6_type, identity, status, quantity, trust, source_type, mission, uav_type, result, route_identification, route_type, signal_type, confidence, grid_cell, observed_date, time_bucket_6h`
+`source, source_id, object_id, observed_at, created_at, lat, lon, end_lat, end_lon, geometry_type, object_type, app6_type, identity, status, quantity, trust, source_type, mission, uav_type, result, route_identification, route_type, signal_type, confidence, hex_cell, observed_date, time_bucket_6h`
 
 ## Data Loaded
 
 - Normalized events: 78,953
-- Fusion clusters: 63,825
+- Fusion clusters: 25,787
 - Observation range: `2024-02-02 15:48:00` to `2026-01-13 09:24:10.728000`
 
 ## Source Summary
@@ -30,7 +30,7 @@ Each source is mapped into:
 
 Direct identifiers are sparse across sources, so `object_id` is preserved but not treated as the universal join key. The fusion layer uses a conservative geo-temporal bucket:
 
-- spatial bucket: 0.02 degree grid cell
+- spatial bucket: 5 km axial hex cell
 - time bucket: 6 hour window
 - semantic bucket: normalized object family
 
@@ -38,22 +38,23 @@ This produces reproducible candidate clusters for analyst review. The cluster sc
 
 ## Highest-Value Fusion Clusters
 
-- C000001: unknown in g0.020_2580_1906, 13 events from 3 sources, score 0.95
-- C000002: unknown in g0.020_2579_1907, 4 events from 3 sources, score 0.897
-- C000003: unknown in g0.020_2579_1910, 4 events from 3 sources, score 0.897
-- C000004: unknown in g0.020_2579_1908, 3 events from 3 sources, score 0.888
-- C000005: unknown in g0.020_2580_1907, 3 events from 3 sources, score 0.888
-- C000006: unknown in g0.020_2580_1889, 3 events from 3 sources, score 0.888
-- C000007: unknown in g0.020_2578_1907, 3 events from 3 sources, score 0.888
-- C000008: unknown in g0.020_2585_1891, 13 events from 2 sources, score 0.904
-- C000009: unknown in g0.020_2586_1892, 13 events from 2 sources, score 0.904
-- C000010: unknown in g0.020_2585_1891, 13 events from 2 sources, score 0.904
+- C000001: unknown in h5_-3_3, 21 events from 4 sources, score 0.985
+- C000002: unknown in h5_0_2, 15 events from 4 sources, score 0.978
+- C000003: unknown in h5_-3_3, 14 events from 4 sources, score 0.976
+- C000004: unknown in h5_0_2, 9 events from 4 sources, score 0.964
+- C000005: unknown in h5_0_2, 8 events from 4 sources, score 0.961
+- C000006: unknown in h5_-1_2, 5 events from 4 sources, score 0.95
+- C000007: unknown in h5_-2_2, 94 events from 3 sources, score 0.971
+- C000008: unknown in h5_0_2, 65 events from 3 sources, score 0.971
+- C000009: unknown in h5_0_2, 53 events from 3 sources, score 0.971
+- C000010: unknown in h5_1_1, 27 events from 3 sources, score 0.971
 
 ## Query Layer
 
-The sample query output demonstrates the intended analyst operation: "what happened in this grid cell on this date, ordered by time?"
+The sample query output demonstrates the intended analyst operation: "what happened in this hex cell on this date, ordered by time?"
 
 - Sample query CSV: `/home/CynicalSuperior/Projects/sensor-fusion/outputs/challenge1/sample_geo_temporal_query.csv`
+- Full timeline CSV: `/home/CynicalSuperior/Projects/sensor-fusion/outputs/challenge1/timeline_events.csv`
 
 ## Limitations
 

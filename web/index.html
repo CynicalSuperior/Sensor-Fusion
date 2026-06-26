@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sensor Fusion Timeline</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Sensor Fusion Timeline</h1>
+          <p id="metaLine">Loading battlefield event model...</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="reloadButton" type="button" title="Reload generated outputs">Reload</button>
+          <a href="/api/meta" target="_blank" rel="noreferrer">API</a>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="filters-panel" aria-label="Filters">
+          <div class="panel-heading">
+            <h2>Filters</h2>
+            <button id="resetButton" type="button" title="Reset filters">Reset</button>
+          </div>
+
+          <label>
+            Source
+            <select id="sourceFilter">
+              <option value="all">All sources</option>
+            </select>
+          </label>
+
+          <label>
+            Object family
+            <select id="familyFilter">
+              <option value="all">All families</option>
+            </select>
+          </label>
+
+          <label>
+            Date from
+            <input id="dateFrom" type="date" />
+          </label>
+
+          <label>
+            Date to
+            <input id="dateTo" type="date" />
+          </label>
+
+          <label>
+            Minimum confidence
+            <input id="confidenceFilter" type="range" min="0" max="1" step="0.05" value="0" />
+            <span id="confidenceValue">0.00</span>
+          </label>
+
+          <label>
+            Search
+            <input id="searchFilter" type="search" placeholder="type, status, signal, id" />
+          </label>
+
+          <section class="metric-list" aria-label="Current result summary">
+            <div>
+              <span>Visible events</span>
+              <strong id="visibleEvents">0</strong>
+            </div>
+            <div>
+              <span>Visible hexes</span>
+              <strong id="visibleHexes">0</strong>
+            </div>
+            <div>
+              <span>Selected hex</span>
+              <strong id="selectedHexLabel">None</strong>
+            </div>
+          </section>
+        </aside>
+
+        <section class="map-panel" aria-label="Hex map">
+          <div class="panel-heading">
+            <div>
+              <h2>Hex Map</h2>
+              <p id="mapHint">Click a hex to construct the timeline for that area.</p>
+            </div>
+            <div class="legend" aria-label="Event count legend">
+              <span></span>
+              <span></span>
+              <span></span>
+              <small>low to high</small>
+            </div>
+          </div>
+          <div id="mapFrame" class="map-frame">
+            <canvas id="hexMap" role="img" aria-label="Hex-grid event map"></canvas>
+          </div>
+        </section>
+
+        <aside class="timeline-panel" aria-label="Timeline">
+          <div class="panel-heading">
+            <div>
+              <h2>Timeline</h2>
+              <p id="timelineSubtitle">Select a hex cell.</p>
+            </div>
+            <span id="timelineCount">0 events</span>
+          </div>
+          <ol id="timelineList" class="timeline-list"></ol>
+        </aside>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
