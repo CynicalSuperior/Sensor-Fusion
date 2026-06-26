@@ -182,6 +182,10 @@ class FusionRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib method name
         parsed = urlparse(self.path)
+        if parsed.path == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
+            return
         if parsed.path.startswith("/api/"):
             self._handle_api(parsed.path, parse_qs(parsed.query))
             return
